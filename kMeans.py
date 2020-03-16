@@ -1,18 +1,18 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 
 class kMeans:
     def __init__(self):
         self.X = None  # data
         self.n_clusters = 2  # number of clusters
-        self.tol = 1e-3  # tolerance
+        self.tol = 1e-3  # variation tolerance
         self.fitted = False  # fit called ?
         self.centroids = None  # list of centroids coords
         self.aff_ = None  # array of affected centroids' indices
+        self.var_ = np.inf  # variation
 
     def fit(self, X, n_clusters=2, tol=1e-3, verbose=0):
-        # will return: [final centroids], array of (n_samples, ) containing attributed centroid's index
+        # will return: self (to directly get var_, call get_clusters if needed)
         self.X = X
         self.n_clusters = n_clusters
         self.tol = tol
@@ -61,7 +61,8 @@ class kMeans:
                 break
             ex_variation = cur_variation
             iter_ += 1
-        return self.centroids, self.aff_
+        self.var_ = cur_variation
+        return self
 
     def get_clusters(self):
         # return a list containing the input_data subdivided into clusters (specified in attr_vec)
@@ -92,25 +93,3 @@ class kMeans:
         for i in range(self.n_clusters):
             cumulative_variation += self.compute_cluster_variation(target_cluster=i)
         return cumulative_variation
-
-
-def plot2d(X_input, format='rx'):
-    X_f1 = X_input[:, 0]
-    X_f2 = X_input[:, 1]
-    plt.plot(X_f2, X_f1, format, color='#1d1d1d')
-
-
-total_samples = 200
-X = np.random.random_sample((total_samples, 2)) * 100
-
-model = kMeans()
-model.fit(X, 3, tol=0, verbose=1)
-clusters = model.get_clusters()
-
-print('variation = ', model.compute_variation())
-
-plot2d(clusters[0], format='rs')
-plot2d(clusters[1], format='r.')
-plot2d(clusters[2], format='r^')
-
-plt.show()
