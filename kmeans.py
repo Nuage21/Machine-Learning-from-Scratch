@@ -2,6 +2,7 @@ import numpy as np
 
 
 class kMeans:
+
     def __init__(self):
         self.X = None  # data
         self.n_clusters = 2  # number of clusters
