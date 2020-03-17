@@ -1,8 +1,6 @@
 import numpy as np
 
-
 class kMeans:
-
     def __init__(self):
         self.X = None  # data
         self.n_clusters = 2  # number of clusters
@@ -94,3 +92,34 @@ class kMeans:
         for i in range(self.n_clusters):
             cumulative_variation += self.compute_cluster_variation(target_cluster=i)
         return cumulative_variation
+
+    def compute_silhouette(self):
+        # return a list of n_clusters np.arrays
+        # each array contains the silhouette coefficients of each simple the cluster holds
+        if not self.fitted:
+            raise RuntimeError('Call fit over data before trying to evaluate the model!')
+        silhouettes = []
+        clusters = self.get_clusters()
+        for i in range(self.n_clusters):
+            centroid = self.centroids[i]
+            # first let's get the index of the closest centroid
+            closest_centroid_index = -1
+            distance = np.inf
+            for j in range(self.n_clusters):
+                if j == i:  # avoid same centroid
+                    continue
+                other_centroid = self.centroids[j]
+                d = np.linalg.norm(centroid - other_centroid)
+                if d < distance:
+                    distance = d
+                    closest_centroid_index = j
+            subset = clusters[i]
+            closest_subset = clusters[closest_centroid_index]
+            (m, _) = subset.shape  # cluster's subset samples
+            clust_sil = np.zeros((m,))
+            for j in range(m):
+                a = np.sum(np.sqrt(np.sum((subset - subset[j]) ** 2, axis=1))) / m  # distance from samples within cluster
+                b = np.sum(np.sqrt(np.sum((closest_subset - subset[j]) ** 2, axis=1))) / m # distance from samples within the closest cluster
+                clust_sil[j] = (b - a) / max(a, b)
+            silhouettes.append(clust_sil)
+        return silhouettes
