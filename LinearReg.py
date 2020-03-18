@@ -54,18 +54,21 @@ class LinearReg:
             ex_error = self.mae_
         return self
 
+    def score(self, X, y, tol=1):
+        # get accuracy of prediction over X & y
+        # score the output for the matrix of inputs
+        if not self.fitted:
+            raise RuntimeError('Model not fitted yet!')
+        y_pred = np.dot(X, self.weights)
+        error = np.sum( np.abs(y_pred - y)) / len(y)  # average distance from correct prediction
+        if error == 0:
+            return 1
+        lamda =  0.69314718056 / (X.shape[0] * tol)  # log(2) / TOL
+        return np.exp(-(lamda * error))
+
     def predict(self, X):
         # predict the output for the matrix of inputs
         if not self.fitted:
             raise RuntimeError('Model not fitted yet!')
         return np.dot(X, self.weights)
 
-
-X = np.array([[1, 1], [1, 2], [1, 3], [1, 4]])
-y = np.array([2, 4, 6, 8])
-
-model = LinearReg().fit(X, y, verbose=1, max_iter=400, tol=0, regularization_rate=1e-1, batch_size=4, learning_rate=0.01)
-
-P = model.predict(np.array([[1, 7], [1, 8], [1, 9]]))
-
-print(P)
