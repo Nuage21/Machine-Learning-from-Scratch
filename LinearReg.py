@@ -44,6 +44,14 @@ class LinearReg:
                     regularization_rate * np.sum(np.insert(self.weights[1:], 0, 0) ** 2))) / (2 * n_samples)
             if verbose:
                 print('iteration ', iteration, ' error = ', self.mae_)
+            if self.mae_ + tol >= ex_error:
+                # if convergence before reaching max_iter
+                if verbose:
+                    print('Convergence!')
+                return self
+            elif iteration + 1 >= max_iter and verbose:
+                print('Failure to converge after ', max_iter, ' iterations')
+            ex_error = self.mae_
         return self
 
     def predict(self, X):
@@ -54,9 +62,9 @@ class LinearReg:
 
 
 X = np.array([[1, 1], [1, 2], [1, 3], [1, 4]])
-y = np.array([1, 2, 3, 4])
+y = np.array([2, 4, 6, 8])
 
-model = LinearReg().fit(X, y, verbose=1, max_iter=400, tol=0, regularization_rate=0, batch_size=4, learning_rate=0.01)
+model = LinearReg().fit(X, y, verbose=1, max_iter=400, tol=0, regularization_rate=1e-1, batch_size=4, learning_rate=0.01)
 
 P = model.predict(np.array([[1, 7], [1, 8], [1, 9]]))
 
