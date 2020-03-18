@@ -1,6 +1,7 @@
 import numpy as np
 
-class kMeans:
+
+class KMeans:
     def __init__(self):
         self.X = None  # data
         self.n_clusters = 2  # number of clusters
@@ -118,8 +119,10 @@ class kMeans:
             (m, _) = subset.shape  # cluster's subset samples
             clust_sil = np.zeros((m,))
             for j in range(m):
-                a = np.sum(np.sqrt(np.sum((subset - subset[j]) ** 2, axis=1))) / m  # distance from samples within cluster
-                b = np.sum(np.sqrt(np.sum((closest_subset - subset[j]) ** 2, axis=1))) / m # distance from samples within the closest cluster
+                a = np.sum(
+                    np.sqrt(np.sum((subset - subset[j]) ** 2, axis=1))) / m  # distance from samples within cluster
+                b = np.sum(np.sqrt(np.sum((closest_subset - subset[j]) ** 2,
+                                          axis=1))) / m  # distance from samples within the closest cluster
                 clust_sil[j] = (b - a) / max(a, b)
             silhouettes.append(clust_sil)
         return silhouettes
