@@ -64,10 +64,6 @@ class LinearReg:
             raise RuntimeError('Model not fitted yet!')
         y_pred = np.dot(X, self.weights)
         d_avg = np.sum(np.abs(y_pred - y)) / len(y)  # average distance from correct prediction
-        print('Hakim')
-        print('Hakim')
-        print('Hakim')
-        print('Hakim')
         return np.exp(- (np.log(2) * d_avg) / tol), d_avg
 
     def predict(self, X):
