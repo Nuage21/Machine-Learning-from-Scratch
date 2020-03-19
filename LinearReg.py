@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class LinearReg:
@@ -37,9 +39,10 @@ class LinearReg:
                 X_batch = X[i:min(i + batch_size, n_samples), :]
                 y_predicted = np.dot(X_batch, self.weights)  # E batch_size x n_features
                 y_real = y[i:min(i + batch_size, n_samples)]
-                self.weights = ((1 - (regularization_rate / n_samples)) * np.insert(self.weights[1:], 0, 0)) - (
-                        learning_rate / n_samples) * np.dot(X_batch.T, y_predicted - y_real)
+                self.weights[1:] *= 1 - (regularization_rate / n_samples)  # regularization part
+                self.weights -= (learning_rate / n_samples) * np.dot(X_batch.T, y_predicted - y_real)
                 i = i + batch_size  # next batch
+            # compute new cost
             self.mae_ = (np.sum((np.dot(X, self.weights) - y) ** 2) + (
                     regularization_rate * np.sum(np.insert(self.weights[1:], 0, 0) ** 2))) / (2 * n_samples)
             if verbose:
@@ -60,10 +63,10 @@ class LinearReg:
         if not self.fitted:
             raise RuntimeError('Model not fitted yet!')
         y_pred = np.dot(X, self.weights)
-        error = np.sum( np.abs(y_pred - y)) / len(y)  # average distance from correct prediction
+        error = np.sum(np.abs(y_pred - y)) / len(y)  # average distance from correct prediction
         if error == 0:
             return 1
-        lamda =  0.69314718056 / (X.shape[0] * tol)  # log(2) / TOL
+        lamda = 0.69314718056 / (X.shape[0] * tol)  # log(2) / TOL
         return np.exp(-(lamda * error))
 
     def predict(self, X):
@@ -71,4 +74,3 @@ class LinearReg:
         if not self.fitted:
             raise RuntimeError('Model not fitted yet!')
         return np.dot(X, self.weights)
-
