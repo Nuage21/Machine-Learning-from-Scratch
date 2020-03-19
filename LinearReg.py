@@ -63,11 +63,12 @@ class LinearReg:
         if not self.fitted:
             raise RuntimeError('Model not fitted yet!')
         y_pred = np.dot(X, self.weights)
-        error = np.sum(np.abs(y_pred - y)) / len(y)  # average distance from correct prediction
-        if error == 0:
-            return 1
-        lamda = 0.69314718056 / (X.shape[0] * tol)  # log(2) / TOL
-        return np.exp(-(lamda * error))
+        d_avg = np.sum(np.abs(y_pred - y)) / len(y)  # average distance from correct prediction
+        print('Hakim')
+        print('Hakim')
+        print('Hakim')
+        print('Hakim')
+        return np.exp(- (np.log(2) * d_avg) / tol), d_avg
 
     def predict(self, X):
         # predict the output for the matrix of inputs
