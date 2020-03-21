@@ -15,6 +15,7 @@ class LogisticReg:
         self.cre_ = np.inf  # cross entropy error of the model
         self.weights = []  # Linear_Regression params
         self.verbose = 0  # display or not fitting progression
+        self.converged_ = 0  # did the model converge ( % tol)
 
     def fit(self, X, y, learning_rate=1e-2, regularization_rate=1e-1, batch_size=10, max_iter=200,
             tol=1e-2, verbose=0):
@@ -46,6 +47,7 @@ class LogisticReg:
                 print('iteration ', iteration, ' error = ', self.cre_)
             if self.cre_ <= ex_error <= self.cre_ + tol:
                 # if convergence before reaching max_iter
+                self.converged_ = 1
                 if verbose:
                     print('Convergence!')
                 return self

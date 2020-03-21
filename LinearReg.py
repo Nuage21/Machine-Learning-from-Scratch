@@ -16,6 +16,7 @@ class LinearReg:
         self.mae_ = np.inf  # mean absolute error of the model
         self.weights = []  # Linear_Regression params
         self.verbose = 0
+        self.converged_ = 0  # did the model converge ( % tol)
 
     def fit(self, X, y, learning_rate=1e-2, regularization_rate=1e-1, batch_size=10, max_iter=200,
             tol=1e-2, verbose=0):
@@ -49,6 +50,7 @@ class LinearReg:
                 print('iteration ', iteration, ' error = ', self.mae_)
             if self.mae_ + tol >= ex_error:
                 # if convergence before reaching max_iter
+                self.converged_ = 1
                 if verbose:
                     print('Convergence!')
                 return self
