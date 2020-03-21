@@ -63,10 +63,19 @@ class LogisticReg:
             return np.int32(pred >= thresh)
         return pred
 
-    def score(self, X, y, thresh=0.5):
-        pred = self.predict(X, prob=0, thresh=thresh)
+    def confusion_matrix(self, X, y, thresh=0.5):
+        pred = self.predict(X, thresh=thresh)
         n_samples = len(y)
-        return (n_samples - np.count_nonzero(y - pred)) / n_samples
+        p_sum = y + 2 * pred
+        TP = np.count_nonzero(p_sum == 3)
+        TN = np.count_nonzero(p_sum == 0)
+        FP = np.count_nonzero(p_sum == 2)
+        FN = n_samples - TP - TN - FP
+        precision = TP / np.float32(TP + FP)
+        recall = TP / np.float32(TP + FN)
+        F1_score = 2 * precision * recall / np.float32(precision + recall)
+        accuracy = (TP + TN) / (TP + TN + FP + FN)
+        return np.array([[TP, FN], [FP, TN]]), precision, recall, F1_score, accuracy
 
     @staticmethod
     def sig(matrix):
