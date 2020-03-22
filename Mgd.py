@@ -19,11 +19,8 @@ class Mgd:
             if verbose:
                 print('Mean vector of training data successfully computed!')
         if sigma is None:
-            sigma = np.zeros((n_features, n_features))
-            for i in range(n_samples):
-                dt = np.dot((X[i, :] - mean).reshape(1, -1).T, (X[i, :] - mean).reshape(1, -1))
-                sigma += dt
-            sigma = sigma / n_samples
+            X_mean = X - np.mean(X, axis=0)
+            sigma = np.dot(X_mean.T, X_mean) / n_samples
             if verbose:
                 print('Covariance matrix of training data successfully computed!')
 
