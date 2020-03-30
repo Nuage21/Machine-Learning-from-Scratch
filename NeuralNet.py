@@ -3,25 +3,31 @@ from sklearn.neural_network import MLPClassifier
 
 
 class NeuralNet:
-    def __init__(self, nn_type='reg', hidden_layer_sizes=(5,), learning_rate=1e-3, regularization_rate=1e-4,
-                 activation='relu', tol=1e-3, max_iter=300):
+    def __init__(self, nn_type='reg', hidden_layer_sizes=(5,), activation='relu'):
         self.hidden_layer_size = hidden_layer_sizes
         self.nn_type = nn_type
-        self.learning_rate = learning_rate
-        self.regularization_rate = regularization_rate
+        self.learning_rate = 1e-3
+        self.regularization_rate = 1e-4
         self.activation = activation
-        self.tol = tol
-        self.max_iter = max_iter
+        self.tol = 1e-3
+        self.max_iter = 300
         self.weighs = []
         self.fitted = 0
 
-    def fit(self, X, y, verbose=True):
+    def fit(self, X, y, learning_rate=1e-3, regularization_rate=1e-4, tol=1e-3, max_iter=300, verbose=True):
         self.fitted = True
+        self.tol = tol
+        self.max_iter = max_iter
+        self.learning_rate = learning_rate
+        self.regularization_rate = regularization_rate
+        # begin
         m, n = X.shape
         out_size = 1
         if y.ndim == 2:
             out_size = y.shape[1]
         self.init_weighs(input_size=n, output_size=out_size)
+        y_p = self.feed_forward(X, return_history=1)
+        print(y_p)
 
     def predict(self, X, prob=0):
         self.check_for_error()
@@ -42,8 +48,8 @@ class NeuralNet:
                 y_p = self.activate(y_p)
                 history.append(y_p)
         if 'c' in self.nn_type:  # classifier
-            if y_p.ndim == 1:
-                y_p = self.sig(y_p)
+            if y_p.shape[0] == 1:
+                y_p = self.sig(y_p)[0]
             else:
                 y_p = np.exp(y_p)
                 y_p /= np.sum(y_p, axis=0)
@@ -65,6 +71,29 @@ class NeuralNet:
             n_rows = layer_sizes[i + 1]
             n_cols = layer_sizes[i] + 1
             self.weighs.append(np.random.randn(n_rows, n_cols) * cf(n_cols))
+
+    def avg_cross_entropy(self, y, y_p, reg='l2'):
+        # compute cross entropy error with regularization rate (l1 or l2)
+        ce = -np.sum((y * np.log(y_p) + (1 - y) * np.log(1 - y_p)))  # average cross entropy
+        regularizator = self.compute_regularization_rate(reg)
+        return (ce + regularizator) / len(y)
+
+    def avg_squared_error(self, y, y_p, reg='l2'):
+        sqr_error = np.sum((y_p - y) ** 2)
+        regularizator = self.compute_regularization_rate(reg)
+        return (sqr_error + regularizator) / len(y)
+
+    def compute_regularization_rate(self, reg='l2'):
+        regularizator = 0
+        if reg == 'l2':
+            for w in self.weighs:
+                regularizator += np.sum(w[:, 1:] ** 2)
+            regularizator *= (self.regularization_rate / 2)
+        else:
+            for w in self.weighs:
+                regularizator += np.sum(np.abs(w[:, 1:]))
+            regularizator *= self.regularization_rate
+        return regularizator
 
     def check_for_error(self):
         # predict the output for the matrix of inputs
@@ -91,7 +120,7 @@ class NeuralNet:
 
 
 X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y = np.array([[0, 1], [1, 1], [1, 2], [0, 3]])
+y = np.array([0, 1, 1, 0])
 
-model = NeuralNet(nn_type='classifier', hidden_layer_sizes=(3, 2), regularization_rate=0, activation='sig')
-model.fit(X, y)
+model = NeuralNet(nn_type='classifier', hidden_layer_sizes=(3, 2), activation='sig')
+model.fit(X, y, learning_rate=0.001, regularization_rate=0, verbose=1)
