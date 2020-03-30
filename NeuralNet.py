@@ -14,7 +14,7 @@ class NeuralNet:
         self.weighs = []
         self.fitted = 0
 
-    def fit(self, X, y, learning_rate=1e-3, regularization_rate=1e-4, tol=1e-3, max_iter=300, verbose=True):
+    def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300, verbose=True):
         self.fitted = True
         self.tol = tol
         self.max_iter = max_iter
@@ -26,6 +26,7 @@ class NeuralNet:
         if y.ndim == 2:
             out_size = y.shape[1]
         self.init_weighs(input_size=n, output_size=out_size)
+        print(self.weighs)
         y_p = self.feed_forward(X, return_history=1)
         print(y_p)
 
@@ -70,7 +71,9 @@ class NeuralNet:
         for i in range(n_layer - 1):
             n_rows = layer_sizes[i + 1]
             n_cols = layer_sizes[i] + 1
-            self.weighs.append(np.random.randn(n_rows, n_cols) * cf(n_cols))
+            w = np.random.randn(n_rows, n_cols-1) * cf(n_cols-1)
+            w = np.insert(w, [0], 1, axis=1)
+            self.weighs.append(w)
 
     def avg_cross_entropy(self, y, y_p, reg='l2'):
         # compute cross entropy error with regularization rate (l1 or l2)
