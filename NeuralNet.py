@@ -15,7 +15,8 @@ class NeuralNet:
         self.error = np.inf
         self.converged_ = False
 
-    def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300, verbose=True):
+    def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300,
+            n_iter_no_change=25, verbose=True):
         self.fitted = True
         self.tol = tol
         self.max_iter = max_iter
@@ -32,6 +33,7 @@ class NeuralNet:
             error_calculator = self.avg_cross_entropy
         deactivator = self.get_deactivator()
         ex_error = np.inf
+        no_change_counter = 0
         for k in range(max_iter):
             history = [X.T] + self.feed_forward(X, return_history=1)
             y_p = history[-1]
@@ -41,10 +43,14 @@ class NeuralNet:
             # check for convergence
             if self.error <= ex_error <= self.error + tol:
                 # if convergence before reaching max_iter
-                self.converged_ = 1
-                if verbose:
-                    print('Convergence!')
-                return self
+                no_change_counter += 1
+                if no_change_counter == n_iter_no_change:
+                    self.converged_ = 1
+                    if verbose:
+                        print('Convergence!')
+                    return self
+            else:
+                no_change_counter = 0  # reset
             n_lay = len(history)
             sigma_nxt = y_p - y
             for i in np.arange(n_lay - 2, -1, -1):
@@ -174,6 +180,6 @@ X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 y = np.array([0, 1, 1, 0])
 
 model = NeuralNet(nn_type='class', hidden_layer_sizes=(2, 3), activation='relu')
-model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-7)
+model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-3, n_iter_no_change=25)
 
 print(model.predict(X))
