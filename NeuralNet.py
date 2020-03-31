@@ -30,6 +30,7 @@ class NeuralNet:
         error_calculator = self.avg_squared_error
         if 'c' in self.nn_type:
             error_calculator = self.avg_cross_entropy
+        deactivator = self.get_deactivator()
         ex_error = np.inf
         for k in range(max_iter):
             history = [X.T] + self.feed_forward(X, return_history=1)
@@ -53,7 +54,7 @@ class NeuralNet:
                 self.weighs[i] -= (learning_rate * grad)
                 if i == 0:
                     break
-                sigma_nxt = np.dot((self.weighs[i])[:, 1:].T, sigma_nxt) * (act_i[1:, :] * (1 - act_i[1:, :]))
+                sigma_nxt = np.dot((self.weighs[i])[:, 1:].T, sigma_nxt) * deactivator(act_i[1:, :])
 
     def predict(self, X, prob=0, thresh=0.5):
         self.check_for_error()
@@ -68,12 +69,13 @@ class NeuralNet:
     def feed_forward(self, X, return_history=0):
         # returns the list of layers after feed forward
         self.check_for_error()
+        activator = self.get_activator()
         y_p = X.T
         history = []
         for i, w in enumerate(self.weighs):
             y_p = np.dot(w, np.insert(y_p, [0], 1, axis=0))
             if i < (len(self.weighs) - 1):
-                y_p = self.activate(y_p)
+                y_p = activator(y_p)
                 if return_history:
                     history.append(y_p)
         if 'c' in self.nn_type:  # classifier
@@ -128,9 +130,14 @@ class NeuralNet:
         if not self.fitted:
             raise RuntimeError('Model not fitted yet!')
 
-    def activate(self, layer):
+    def get_activator(self):
         f = getattr(self, self.activation)
-        return f(layer)
+        return f
+
+    def get_deactivator(self):
+        grd_fnc = self.activation + '_gradient'  # convention
+        f_prime = getattr(self, grd_fnc)
+        return f_prime
 
     @staticmethod
     def sig(matrix):
@@ -138,28 +145,34 @@ class NeuralNet:
 
     @staticmethod
     def relu(matrix):
-        matrix[matrix <= 0] = 0
-        return matrix
+        tmp = matrix.copy()
+        tmp[tmp <= 0] = 0
+        return tmp
 
     @staticmethod
     def tanh(matrix):
         tmp = np.exp(-2 * matrix)
         return (1 - tmp) / (1 + tmp)
 
+    @staticmethod
+    def sig_gradient(matrix):
+        return matrix * (1 - matrix)
 
-X = []
-y = []
+    @staticmethod
+    def tanh_gradient(matrix):
+        return 1 - matrix.copy() ** 2
 
-for i in range(10):
-    X = X + [[i]]
-    y = y + [2 * i]
+    @staticmethod
+    def relu_gradient(matrix):
+        tmp = matrix.copy()
+        tmp[tmp > 0] = 1  # gradient
+        return tmp
 
-X = np.array(X)
-y = np.array(y)
 
-print(X)
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([0, 1, 1, 0])
 
-model = NeuralNet(nn_type='reg', hidden_layer_sizes=(2, 3), activation='sig')
+model = NeuralNet(nn_type='class', hidden_layer_sizes=(2, 3), activation='tanh')
 model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-3)
 
 print(model.predict(X))
