@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.neural_network import MLPClassifier
 
 
 class NeuralNet:
@@ -13,6 +12,8 @@ class NeuralNet:
         self.max_iter = 300
         self.weighs = []
         self.fitted = 0
+        self.error = np.inf
+        self.converged_ = False
 
     def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300, verbose=True):
         self.fitted = True
@@ -29,23 +30,35 @@ class NeuralNet:
         error_calculator = self.avg_squared_error
         if 'c' in self.nn_type:
             error_calculator = self.avg_cross_entropy
+        ex_error = np.inf
         for k in range(max_iter):
             history = [X.T] + self.feed_forward(X, return_history=1)
             y_p = history[-1]
+            self.error = error_calculator(y, y_p, reg)
             if verbose:
-                print(f'iteration {k}, {error_calculator.__name__} = {error_calculator(y, y_p, reg)}')
+                print(f'iteration {k}, {error_calculator.__name__} = {self.error}')
+            # check for convergence
+            if self.error <= ex_error <= self.error + tol:
+                # if convergence before reaching max_iter
+                self.converged_ = 1
+                if verbose:
+                    print('Convergence!')
+                return self
             n_lay = len(history)
-            for i in range(n_lay - 1):
+            sigma_nxt = y_p - y
+            for i in np.arange(n_lay - 2, -1, -1):
                 act_i = np.insert(history[i], [0], 1, axis=0)  # add bias line (1)
-                sigma_nxt = history[i + 1] - y_p[0]
                 grad = np.dot(sigma_nxt, act_i.T) / m
                 grad[:, 1:] += (regularization_rate * (self.weighs[i])[:, 1:]) / m
                 self.weighs[i] -= (learning_rate * grad)
+                if i == 0:
+                    break
+                sigma_nxt = np.dot((self.weighs[i])[:, 1:].T, sigma_nxt) * (act_i[1:, :] * (1 - act_i[1:, :]))
 
     def predict(self, X, prob=0, thresh=0.5):
         self.check_for_error()
         y = self.feed_forward(X, return_history=0)[0].T
-        if prob:
+        if prob or 'r' in self.nn_type:
             return y
         return np.int32(y >= thresh)
 
@@ -134,10 +147,19 @@ class NeuralNet:
         return (1 - tmp) / (1 + tmp)
 
 
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y = np.array([0, 1, 1, 0])
+X = []
+y = []
 
-model = NeuralNet(nn_type='class', hidden_layer_sizes=(1, 1), activation='sig')
-model.fit(X, y, learning_rate=0.0001, regularization_rate=0, verbose=1, max_iter=500000)
+for i in range(10):
+    X = X + [[i]]
+    y = y + [2 * i]
 
-print(model.predict(X, prob=1))
+X = np.array(X)
+y = np.array(y)
+
+print(X)
+
+model = NeuralNet(nn_type='reg', hidden_layer_sizes=(2, 3), activation='sig')
+model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-3)
+
+print(model.predict(X))
