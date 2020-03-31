@@ -1,7 +1,7 @@
 # Machine-Learning-from-Scratch
 
 ML-from-Scratch is my personal implementation of Machine Learning algorithms, built on **numpy** only, mainly done to understand more how the algorithms
-work, illustrative jupyter notebooks are presented that will step you through to get better understand how to use them.
+work, illustrative jupyter notebooks are presented that will step you through to better understand how to use them.
 
 At this moment the implemented algorithms/notebooks are:
 
