@@ -55,6 +55,7 @@ class NeuralNet:
                 if i == 0:
                     break
                 sigma_nxt = np.dot((self.weighs[i])[:, 1:].T, sigma_nxt) * deactivator(act_i[1:, :])
+            ex_error = self.error
 
     def predict(self, X, prob=0, thresh=0.5):
         self.check_for_error()
@@ -172,7 +173,7 @@ class NeuralNet:
 X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 y = np.array([0, 1, 1, 0])
 
-model = NeuralNet(nn_type='class', hidden_layer_sizes=(2, 3), activation='tanh')
-model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-3)
+model = NeuralNet(nn_type='class', hidden_layer_sizes=(2, 3), activation='relu')
+model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-7)
 
 print(model.predict(X))
