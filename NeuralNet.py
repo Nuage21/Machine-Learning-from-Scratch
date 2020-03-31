@@ -56,7 +56,12 @@ class NeuralNet:
             for i in np.arange(n_lay - 2, -1, -1):
                 act_i = np.insert(history[i], [0], 1, axis=0)  # add bias line (1)
                 grad = np.dot(sigma_nxt, act_i.T) / m
-                grad[:, 1:] += (regularization_rate * (self.weighs[i])[:, 1:]) / m
+                # compute weigh regularization respect to specified (l1 | l2)
+                w_reg = (self.weighs[i])[:, 1:].copy()
+                if reg == 'l1':
+                    w_reg[w_reg > 0] = 1 # l1 gradient
+                    w_reg[w_reg < 0] = -1 # l1 gradient
+                grad[:, 1:] += (regularization_rate * w_reg) / m
                 self.weighs[i] -= (learning_rate * grad)
                 if i == 0:
                     break
@@ -180,6 +185,6 @@ X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 y = np.array([0, 1, 1, 0])
 
 model = NeuralNet(nn_type='class', hidden_layer_sizes=(2, 3), activation='relu')
-model.fit(X, y, learning_rate=0.01, regularization_rate=0, verbose=1, max_iter=100000, tol=1e-3, n_iter_no_change=25)
+model.fit(X, y, learning_rate=0.01, reg='l1', regularization_rate=0.01, verbose=1, max_iter=100000, tol=1e-4, n_iter_no_change=25)
 
 print(model.predict(X))
