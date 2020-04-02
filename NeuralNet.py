@@ -37,9 +37,11 @@ class NeuralNet:
             self._is_classifier = True
 
     def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300,
-            n_check_no_change=25, batch_size=10, stch_iter_err_check=1, verbose=False):
+            n_check_no_change=25, batch_size=10, stch_iter_err_check=1, warm_start=False, verbose=False):
         if reg not in ['l1', 'l2']:
             raise NotImplementedError(f'> {reg}: supported regularizations are \'l1\' and \'l2\'')
+        if warm_start and not self.fitted:
+            raise RuntimeError('Can\'t warm start if model is not fitted yet')
         # save (for warm start ?)
         self.fitted = True
         self.tol = tol
@@ -55,7 +57,8 @@ class NeuralNet:
         out_size = 1
         if y.ndim == 2:
             out_size = y.shape[1]
-        self._init_weighs(input_size=n, output_size=out_size)
+        if not warm_start:
+            self._init_weighs(input_size=n, output_size=out_size)
         error_calculator = self._avg_squared_error
         if self._is_classifier:
             error_calculator = self._avg_cross_entropy
@@ -72,7 +75,7 @@ class NeuralNet:
                 if n_iters % stch_iter_err_check == 0:
                     self.error = error_calculator(y, self.predict(X, prob=1), reg)
                     if verbose:
-                        print(f'iteration {k}, {error_calculator.__name__} = {self.error}')
+                        print(f'iteration {k}, {error_calculator.__name__[1:]} = {self.error}')
                     # check for convergence
                     if self.error <= ex_error <= self.error + tol:
                         # if convergence before reaching max_iter
@@ -103,7 +106,9 @@ class NeuralNet:
                 j += batch_size
                 n_iters += 1
         # if arrived here than no convergence
-        print(f'Failure to converge! final {error_calculator.__name__} = {self.error}')
+        self.error = error_calculator(y, self.predict(X, prob=1), reg)  # update error
+        print(f'last iteration, {error_calculator.__name__[1:]} = {self.error}')
+        print(f'Failure to converge! final {error_calculator.__name__[1:]} = {self.error}')
         return self
 
     def predict(self, X, prob=0, thresh=0.5):
@@ -217,15 +222,3 @@ class NeuralNet:
         tmp = matrix.copy()
         tmp[tmp > 0] = 1  # gradient
         return tmp
-
-
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y = np.array([0, 1, 1, 0])
-
-model = NeuralNet(nn_type='class', hidden_layer_sizes=(1, 2,), activation='tanh')
-model.fit(X, y, learning_rate=0.1, reg='l1', regularization_rate=0, verbose=1, max_iter=10000, tol=1e-7,
-          n_check_no_change=30, batch_size=2, stch_iter_err_check=2)
-
-print(model.predict(X, prob=0))
-print(model.weighs)
-
