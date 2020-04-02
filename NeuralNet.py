@@ -3,6 +3,20 @@ import numpy as np
 
 class NeuralNet:
     def __init__(self, nn_type='reg', hidden_layer_sizes=(5,), activation='relu'):
+        self._supported_activations = ['relu', 'tanh', 'sig']
+        # check params
+        if nn_type not in ['reg', 'class']:
+            raise NotImplementedError(
+                f'> {nn_type}: nn_type should either be \'class\' (for classification) or \'reg\' (for regression)')
+        if activation not in self._supported_activations:
+            raise NotImplementedError(
+                f'{activation} activation function is not supported, implemented are {self._supported_activations}')
+        for l in hidden_layer_sizes:
+            if not isinstance(l, int):
+                raise TypeError(f'> {hidden_layer_sizes}, a layer size should be an integer')
+            if l <= 0:
+                raise ValueError(f'> {hidden_layer_sizes}, a layer size should be a positive integer')
+
         self.hidden_layer_size = hidden_layer_sizes
         self.nn_type = nn_type
         self.learning_rate = 1e-3
@@ -14,74 +28,95 @@ class NeuralNet:
         self.fitted = 0
         self.error = np.inf
         self.converged_ = False
+        self.n_check_no_change = 25
+        self.batch_size = 10
+        self.stch_iter_err_check = 1
+        self.verbose = False
 
     def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300,
-            n_iter_no_change=25, verbose=True):
+            n_check_no_change=25, batch_size=10, stch_iter_err_check=1, verbose=False):
+        if reg not in ['l1', 'l2']:
+            raise NotImplementedError(f'> {reg}: supported regularizations are \'l1\' and \'l2\'')
+        # save (for warm start ?)
         self.fitted = True
         self.tol = tol
         self.max_iter = max_iter
         self.learning_rate = learning_rate
         self.regularization_rate = regularization_rate
+        self.n_check_no_change = n_check_no_change
+        self.batch_size = batch_size
+        self.stch_iter_err_check = stch_iter_err_check
+        self.verbose = verbose
         # begin
         m, n = X.shape
         out_size = 1
         if y.ndim == 2:
             out_size = y.shape[1]
-        self.init_weighs(input_size=n, output_size=out_size)
-        error_calculator = self.avg_squared_error
+        self._init_weighs(input_size=n, output_size=out_size)
+        error_calculator = self._avg_squared_error
         if 'c' in self.nn_type:
-            error_calculator = self.avg_cross_entropy
-        deactivator = self.get_deactivator()
+            error_calculator = self._avg_cross_entropy
+        deactivator = self._get_deactivator()
         ex_error = np.inf
         no_change_counter = 0
+        n_iters = 0
         for k in range(max_iter):
-            history = [X.T] + self.feed_forward(X, return_history=1)
-            y_p = history[-1]
-            self.error = error_calculator(y, y_p, reg)
-            if verbose:
-                print(f'iteration {k}, {error_calculator.__name__} = {self.error}')
-            # check for convergence
-            if self.error <= ex_error <= self.error + tol:
-                # if convergence before reaching max_iter
-                no_change_counter += 1
-                if no_change_counter == n_iter_no_change:
-                    self.converged_ = 1
+            j = 0
+            while j < m:
+                X_batch = X[j:min(j + batch_size, m), :]
+                history = [X_batch.T] + self.feed_forward(X_batch, return_history=1)
+                y_p = history[-1]
+                if n_iters % stch_iter_err_check == 0:
+                    self.error = error_calculator(y, self.predict(X, prob=1), reg)
                     if verbose:
-                        print('Convergence!')
-                    return self
-            else:
-                no_change_counter = 0  # reset
-            n_lay = len(history)
-            sigma_nxt = y_p - y
-            for i in np.arange(n_lay - 2, -1, -1):
-                act_i = np.insert(history[i], [0], 1, axis=0)  # add bias line (1)
-                grad = np.dot(sigma_nxt, act_i.T) / m
-                # compute weigh regularization respect to specified (l1 | l2)
-                w_reg = (self.weighs[i])[:, 1:].copy()
-                if reg == 'l1':
-                    w_reg[w_reg > 0] = 1 # l1 gradient
-                    w_reg[w_reg < 0] = -1 # l1 gradient
-                grad[:, 1:] += (regularization_rate * w_reg) / m
-                self.weighs[i] -= (learning_rate * grad)
-                if i == 0:
-                    break
-                sigma_nxt = np.dot((self.weighs[i])[:, 1:].T, sigma_nxt) * deactivator(act_i[1:, :])
-            ex_error = self.error
+                        print(f'iteration {k}, {error_calculator.__name__} = {self.error}')
+                    # check for convergence
+                    if self.error <= ex_error <= self.error + tol:
+                        # if convergence before reaching max_iter
+                        no_change_counter += 1
+                        if no_change_counter >= n_check_no_change:
+                            self.converged_ = 1
+                            if verbose:
+                                print('Convergence!')
+                            return self
+                    else:
+                        no_change_counter = 0  # reset
+                n_lay = len(history)
+                sigma_nxt = y_p - y[j:min(j + batch_size, m)]
+                for i in np.arange(n_lay - 2, -1, -1):
+                    act_i = np.insert(history[i], [0], 1, axis=0)  # add bias line (1)
+                    grad = np.dot(sigma_nxt, act_i.T) / m
+                    # compute weigh regularization respect to specified (l1 | l2)
+                    w_reg = (self.weighs[i])[:, 1:].copy()  # if reg = 'l2'
+                    if reg == 'l1':
+                        w_reg[w_reg > 0] = 1  # l1 gradient
+                        w_reg[w_reg < 0] = -1  # l1 gradient
+                    grad[:, 1:] += (regularization_rate * w_reg) / m
+                    self.weighs[i] -= (learning_rate * grad)
+                    if i == 0:
+                        break
+                    sigma_nxt = np.dot((self.weighs[i])[:, 1:].T, sigma_nxt) * deactivator(act_i[1:, :])
+                ex_error = self.error
+                j += batch_size
+                n_iters += 1
+        # if arrived here than no convergence
+        print(f'Failure to converge! final {error_calculator.__name__} = {self.error}')
+        return self
 
     def predict(self, X, prob=0, thresh=0.5):
-        self.check_for_error()
+        self._check_for_error()
         y = self.feed_forward(X, return_history=0)[0].T
         if prob or 'r' in self.nn_type:
             return y
         return np.int32(y >= thresh)
 
     def score(self, X, y):
-        self.check_for_error()
+        self._check_for_error()
 
     def feed_forward(self, X, return_history=0):
         # returns the list of layers after feed forward
-        self.check_for_error()
-        activator = self.get_activator()
+        self._check_for_error()
+        activator = self._get_activator()
         y_p = X.T
         history = []
         for i, w in enumerate(self.weighs):
@@ -98,7 +133,7 @@ class NeuralNet:
             return history
         return y_p
 
-    def init_weighs(self, input_size, output_size):
+    def _init_weighs(self, input_size, output_size):
         # Xavier init weighs if 'tanh' activation and He if 'ReLu'
         layer_sizes = [input_size] + list(self.hidden_layer_size) + [output_size]
         n_layer = len(layer_sizes)
@@ -114,18 +149,18 @@ class NeuralNet:
             w = np.insert(w, [0], 1, axis=1)
             self.weighs.append(w)
 
-    def avg_cross_entropy(self, y, y_p, reg='l2'):
+    def _avg_cross_entropy(self, y, y_p, reg='l2'):
         # compute cross entropy error with regularization rate (l1 or l2)
         ce = -np.sum(y * np.log(y_p)) - np.sum((1 - y) * np.log(1 - y_p))  # average cross entropy
-        regularizator = self.compute_regularization_rate(reg)
+        regularizator = self._compute_regularization_rate(reg)
         return (ce + regularizator) / len(y)
 
-    def avg_squared_error(self, y, y_p, reg='l2'):
+    def _avg_squared_error(self, y, y_p, reg='l2'):
         sqr_error = np.sum((y_p - y) ** 2)
-        regularizator = self.compute_regularization_rate(reg)
+        regularizator = self._compute_regularization_rate(reg)
         return (sqr_error + regularizator) / len(y)
 
-    def compute_regularization_rate(self, reg='l2'):
+    def _compute_regularization_rate(self, reg='l2'):
         regularizator = 0
         if reg == 'l2':
             for w in self.weighs:
@@ -137,16 +172,16 @@ class NeuralNet:
             regularizator *= self.regularization_rate
         return regularizator
 
-    def check_for_error(self):
+    def _check_for_error(self):
         # predict the output for the matrix of inputs
         if not self.fitted:
             raise RuntimeError('Model not fitted yet!')
 
-    def get_activator(self):
+    def _get_activator(self):
         f = getattr(self, self.activation)
         return f
 
-    def get_deactivator(self):
+    def _get_deactivator(self):
         grd_fnc = self.activation + '_gradient'  # convention
         f_prime = getattr(self, grd_fnc)
         return f_prime
@@ -184,7 +219,10 @@ class NeuralNet:
 X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 y = np.array([0, 1, 1, 0])
 
-model = NeuralNet(nn_type='class', hidden_layer_sizes=(2, 3), activation='relu')
-model.fit(X, y, learning_rate=0.01, reg='l1', regularization_rate=0.01, verbose=1, max_iter=100000, tol=1e-4, n_iter_no_change=25)
+model = NeuralNet(nn_type='class', hidden_layer_sizes=(1, 2,), activation='tanh')
+model.fit(X, y, learning_rate=0.1, reg='l1', regularization_rate=0, verbose=1, max_iter=10000, tol=1e-7,
+          n_check_no_change=30, batch_size=2, stch_iter_err_check=2)
 
-print(model.predict(X))
+print(model.predict(X, prob=0))
+print(model.weighs)
+
