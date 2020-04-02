@@ -2,7 +2,7 @@ import numpy as np
 
 
 class NeuralNet:
-    def __init__(self, nn_type='reg', hidden_layer_sizes=(5,), activation='relu'):
+    def __init__(self, nn_type, hidden_layer_sizes=(5,), activation='relu'):
         self._supported_activations = ['relu', 'tanh', 'sig']
         # check params
         if nn_type not in ['reg', 'class']:
@@ -32,6 +32,9 @@ class NeuralNet:
         self.batch_size = 10
         self.stch_iter_err_check = 1
         self.verbose = False
+        self._is_classifier = False
+        if 'c' in nn_type:
+            self._is_classifier = True
 
     def fit(self, X, y, learning_rate=1e-3, reg='l2', regularization_rate=1e-4, tol=1e-3, max_iter=300,
             n_check_no_change=25, batch_size=10, stch_iter_err_check=1, verbose=False):
@@ -54,7 +57,7 @@ class NeuralNet:
             out_size = y.shape[1]
         self._init_weighs(input_size=n, output_size=out_size)
         error_calculator = self._avg_squared_error
-        if 'c' in self.nn_type:
+        if self._is_classifier:
             error_calculator = self._avg_cross_entropy
         deactivator = self._get_deactivator()
         ex_error = np.inf
@@ -106,7 +109,7 @@ class NeuralNet:
     def predict(self, X, prob=0, thresh=0.5):
         self._check_for_error()
         y = self.feed_forward(X, return_history=0)[0].T
-        if prob or 'r' in self.nn_type:
+        if prob or not self._is_classifier:
             return y
         return np.int32(y >= thresh)
 
@@ -125,7 +128,7 @@ class NeuralNet:
                 y_p = activator(y_p)
                 if return_history:
                     history.append(y_p)
-        if 'c' in self.nn_type:  # classifier
+        if self._is_classifier:
             if y_p.shape[0] == 1:
                 y_p = self.sig(y_p)
         if return_history:
