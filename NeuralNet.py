@@ -5,9 +5,9 @@ class NeuralNet:
     def __init__(self, nn_type, hidden_layer_sizes=(5,), activation='relu'):
         self._supported_activations = ['relu', 'tanh', 'sig']
         # check params
-        if nn_type not in ['reg', 'class']:
+        if nn_type not in ['reggressor', 'sigmoid_classifier', 'softmax_classifier']:
             raise NotImplementedError(
-                f'> {nn_type}: nn_type should either be \'class\' (for classification) or \'reg\' (for regression)')
+                f'> {nn_type}: nn_type should either be \'sigmoid_classifier\' (for 2C classification), \'softmax_classifier\' or \'reggressor\' (for regression)')
         if activation not in self._supported_activations:
             raise NotImplementedError(
                 f'{activation} activation function is not supported, implemented are {self._supported_activations}')
